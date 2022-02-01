@@ -95,10 +95,10 @@ class RivetMerge(Task):
         _rivet_args = [
             "--output={OUTPUT_FILE}".format(OUTPUT_FILE=output_file)
         ]
-        _rivet_in = [
+        _rivet_in = ["-e"] + [
             "{YODA_FILES}".format(YODA_FILES=_yoda_file) for _yoda_file in inputfile_list
         ]
-
+        
         if len(inputfile_list) > 10:
             print("Input files: {},...,{}".format(inputfile_list[0],inputfile_list[-1]))
             print('Executable: {} {}'.format(" ".join(_rivet_exec + _rivet_args), " ".join([_rivet_in[0],"[...]",_rivet_in[-1]])))
