@@ -12,7 +12,7 @@ from generation.framework import Task
 from RunRivet import RunRivet
 
 
-class YodaMerge(Task):
+class RivetMerge(Task):
     """
     Merge separate YODA files from Rivet analysis runs to a single YODA file 
     """
@@ -26,6 +26,7 @@ class YodaMerge(Task):
         "chunk_size"
     }
 
+
     def convert_env_to_dict(self, env):
         my_env = {}
         for line in env.splitlines():
@@ -37,6 +38,7 @@ class YodaMerge(Task):
                     pass
         return my_env
 
+
     def set_environment_variables(self):
         code, out, error = interruptable_popen("source {}; env".format(os.path.join(os.path.dirname(__file__),"..","..","..","setup","setup_rivet.sh")),
                                                shell=True, 
@@ -46,16 +48,24 @@ class YodaMerge(Task):
         my_env = self.convert_env_to_dict(out)
         return my_env
 
+
     def requires(self):
         return {
             'RunRivet': RunRivet.req(self),
         }
+
+
+    def remote_path(self, *path):
+        parts = (self.__class__.__name__,self.input_file_name, self.mc_setting, ) + path
+        return os.path.join(*parts)
     
+
     def output(self):
-        return self.remote_target("{MC_SETTING}/{INPUT_FILE_NAME}.yoda".format(
-            MC_SETTING=str(self.mc_setting),
-            INPUT_FILE_NAME=str(self.input_file_name)
-            ))
+        return self.remote_target(
+            "{INPUT_FILE_NAME}.yoda".format(
+                INPUT_FILE_NAME=str(self.input_file_name)
+            )
+        )
 
 
     def mergeSingleYodaChunk(self, inputfile_list, inputfile_chunk=None):
@@ -81,11 +91,11 @@ class YodaMerge(Task):
                 BUNCH=inputfile_chunk
                 )
 
-        _rivet_exec = ["yodamerge"]
+        _rivet_exec = ["rivet-merge"]
         _rivet_args = [
             "--output={OUTPUT_FILE}".format(OUTPUT_FILE=output_file)
         ]
-        _rivet_in = [
+        _rivet_in = ["-e"] + [
             "{YODA_FILES}".format(YODA_FILES=_yoda_file) for _yoda_file in inputfile_list
         ]
 
@@ -108,7 +118,6 @@ class YodaMerge(Task):
             raise Exception('Error: ' + error + 'Output: ' + out + '\nYodaMerge returned non-zero exit status {}'.format(code))
         else:
             print('Output: ' + out)
-
 
         try:
             os.path.exists(output_file)
@@ -145,8 +154,10 @@ class YodaMerge(Task):
 
         # ensure that the output directory exists
         output = self.output()
-        output.parent.touch()
-
+        try:
+            output.parent.touch()
+        except IOError:
+            print("Output target doesn't exist!")
 
         # actual payload:
         print("=======================================================")
@@ -156,9 +167,11 @@ class YodaMerge(Task):
         # localize the separate YODA files on grid storage
         inputfile_list = []
         for branch, target in self.input()['RunRivet']["collection"].targets.items():
-            with target.localize('r') as _file:
-                inputfile_list.append(_file.path)
+            if target.exists():
+                with target.localize('r') as _file:
+                    inputfile_list.append(_file.path)
 
+        # merge in chunks
         chunk_size = self.chunk_size
 
         final_input_files=inputfile_list
