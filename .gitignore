@@ -1,5 +1,9 @@
-# user generated logs
-logs/
+# user generated logs and temporary outputs
+data/
+rivet-plots/
+
+# law/luigi logs
+tmp/
 
 # Herwig outputs
 *.run
@@ -10,15 +14,23 @@ logs/
 
 # Herwig installations
 Herwig-cache/
-Herwig*/
+Herwig*/*
 
 # additional stuff
 *.swp
 
 # compilation outputs
 *.pyc
+*.so
 
 # Law outputs
-Law-Setup/data/
+logs/*
 *.tar.gz
-Law-Setup/.law/
+.law/
+plots*
+
+# vitural environments
+.venv
+
+# editor files
+.vscode
